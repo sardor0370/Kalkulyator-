@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Kalkulyator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;background:#000}
+body{font-family:-apple-system,"SF Pro Display","Helvetica Neue",Roboto,system-ui,sans-serif;color:#fff;display:flex;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#app{width:100%;max-width:400px;height:100%;max-height:900px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 16px 22px}
+#disp{text-align:right;font-weight:300;font-size:88px;line-height:1.1;padding:0 8px 14px;white-space:nowrap;overflow:hidden;min-height:100px}
+#pad{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+button{aspect-ratio:1;border:0;border-radius:50%;font:400 clamp(28px,8vw,36px) inherit;font-family:inherit;color:#fff;background:#333;cursor:pointer;transition:background .5s ease-out,color .35s ease-out;touch-action:manipulation;-webkit-user-select:none}
+.f{background:#a5a5a5;color:#000}
+.o{background:#ff9f0a;font-size:clamp(34px,9vw,42px)}
+.o.on{background:#fff;color:#ff9f0a}
+button.p{background:#737373;transition:none}
+button.f.p{background:#d9d9d9}
+button.o.p{background:#fbc78d;color:#fff}
+button.o.on.p{background:#fbc78d;color:#ff9f0a}
+#z{grid-column:span 2;aspect-ratio:auto;border-radius:999px;text-align:left;padding-left:8%;height:100%}
+#tag{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:18px;font-family:"Dancing Script","Segoe Script","Snell Roundhand",cursive;font-weight:600;font-size:14px;color:#ff9f0a;letter-spacing:.03em;opacity:.92;pointer-events:none}
+#splash{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9;transition:opacity .6s,visibility .6s}
+#splash.off{opacity:0;visibility:hidden}
+#splash .c{width:84px;height:84px;border-radius:22px;background:#ff9f0a;display:grid;place-items:center;font-size:46px;font-weight:300;animation:pop 1s cubic-bezier(.2,1.4,.4,1) both}
+#splash p{margin-top:22px;font-size:22px;letter-spacing:.14em;font-weight:300;opacity:0;animation:up .9s .5s forwards}
+#splash b{font-weight:700;color:#ff9f0a}
+#splash i{display:block;width:120px;height:3px;margin-top:26px;border-radius:3px;background:#333;overflow:hidden;position:relative}
+#splash i:after{content:"";position:absolute;inset:0;background:#ff9f0a;transform:translateX(-100%);animation:ld 1.8s .3s forwards}
+@keyframes pop{from{transform:scale(0) rotate(-180deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes up{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ld{to{transform:none}}
+</style>
+</head>
+<body>
+<div id="splash"><div class="c">÷</div><p>Made by <b>Sardor</b></p><i></i></div>
+<div id="tag">Made by Sardor</div>
+<div id="app">
+<div id="disp">0</div>
+<div id="pad">
+<button class="f" id="ac">AC</button><button class="f" id="neg">+/−</button><button class="f" id="pct">%</button><button class="o" data-o="/">÷</button>
+<button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button><button class="o" data-o="*">×</button>
+<button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button><button class="o" data-o="-">−</button>
+<button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button><button class="o" data-o="+">+</button>
+<button id="z" data-d="0">0</button><button id="dot">,</button><button class="o" id="eq">=</button>
+</div>
+</div>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var cur="0",acc=null,op=null,fresh=false,lastOp=null,lastVal=0,err=false;
+function calc(a,o,b){var r=o==="+"?a+b:o==="-"?a-b:o==="*"?a*b:b===0?NaN:a/b;return r}
+function toStr(n){
+if(!isFinite(n)||isNaN(n)){err=true;return "Xato"}
+if(Math.abs(n)>=1e9||(n!==0&&Math.abs(n)<1e-7))return n.toExponential(4).replace(/\.?0+e/,"e");
+return String(parseFloat(n.toPrecision(9)))}
+function show(){
+var s=cur;if(err){$("disp").textContent=s;fit(s);return}
+var neg=s[0]==="-";if(neg)s=s.slice(1);
+if(s.indexOf("e")>-1){s=(neg?"-":"")+s.replace(".",",");}
+else{var p=s.split(".");var i=p[0].replace(/\B(?=(\d{3})+(?!\d))/g," ");s=(neg?"-":"")+i+(p.length>1?","+p[1]:"")}
+$("disp").textContent=s;fit(s);
+$("ac").textContent=(cur!=="0"&&!err&&!fresh)||(cur!=="0"&&op===null&&!fresh)?"C":"AC";
+var ops=document.querySelectorAll(".o[data-o]");
+for(var k=0;k<ops.length;k++)ops[k].className=(ops[k].dataset.o===op&&fresh)?"o on":"o"}
+function fit(s){$("disp").style.fontSize=Math.max(42,88-Math.max(0,s.length-6)*9)+"px"}
+function digit(d){
+if(err)reset();
+if(fresh){cur=d;fresh=false}
+else if(cur==="0")cur=d;
+else if(cur.replace(/[-.]/g,"").length<9)cur+=d;
+show()}
+function dot(){
+if(err)reset();
+if(fresh){cur="0.";fresh=false}
+else if(cur.indexOf(".")<0&&cur.indexOf("e")<0)cur+=".";
+show()}
+function oper(o){
+if(err)return;
+if(op&&!fresh){acc=calc(acc,op,parseFloat(cur));cur=toStr(acc);if(err){show();return}}
+else acc=parseFloat(cur);
+op=o;fresh=true;lastOp=null;show()}
+function eq(){
+if(err)return;
+var r;
+if(op){var b=parseFloat(cur);r=calc(acc,op,b);lastOp=op;lastVal=b}
+else if(lastOp){r=calc(parseFloat(cur),lastOp,lastVal)}
+else return;
+cur=toStr(r);op=null;acc=null;fresh=true;show()}
+function pct(){
+if(err)return;
+var v=parseFloat(cur);
+v=(op==="+"||op==="-")&&acc!==null?acc*v/100:v/100;
+cur=toStr(v);show()}
+function neg(){
+if(err)return;
+if(cur==="0")return;
+cur=cur[0]==="-"?cur.slice(1):"-"+cur;show()}
+function reset(){cur="0";acc=null;op=null;fresh=false;lastOp=null;err=false}
+function clr(){
+if($("ac").textContent==="C"){cur="0";fresh=false;show()}
+else{reset();show()}}
+function back(){
+if(err||fresh)return;
+cur=cur.length>1&&!(cur.length===2&&cur[0]==="-")?cur.slice(0,-1):"0";show()}
+var d=document.querySelectorAll("[data-d]");
+for(var i=0;i<d.length;i++)(function(e){e.onclick=function(){digit(e.dataset.d)}})(d[i]);
+var o=document.querySelectorAll("[data-o]");
+for(var j=0;j<o.length;j++)(function(e){e.onclick=function(){oper(e.dataset.o)}})(o[j]);
+$("dot").onclick=dot;$("eq").onclick=eq;$("pct").onclick=pct;$("neg").onclick=neg;$("ac").onclick=clr;
+document.addEventListener("keydown",function(e){
+var k=e.key;
+if(k>="0"&&k<="9")digit(k);
+else if(k==="."||k===",")dot();
+else if(k==="+"||k==="-"||k==="*"||k==="/"){e.preventDefault();oper(k)}
+else if(k==="x"||k==="X")oper("*");
+else if(k==="Enter"||k==="="){e.preventDefault();eq()}
+else if(k==="Backspace")back();
+else if(k==="Escape"){reset();show()}
+else if(k==="%")pct()});
+var bs=document.querySelectorAll("#pad button");
+for(var q=0;q<bs.length;q++)(function(e){
+function up(){var w=Math.max(0,70-(Date.now()-(e._t||0)));setTimeout(function(){e.classList.remove("p")},w)}
+e.addEventListener("pointerdown",function(){e._t=Date.now();e.classList.add("p");try{if(navigator.vibrate)navigator.vibrate(6)}catch(x){}});
+e.addEventListener("pointerup",up);e.addEventListener("pointercancel",up);e.addEventListener("pointerleave",up)})(bs[q]);
+show();
+setTimeout(function(){$("splash").className="off"},2600);
+})();
+</script>
+</body>
+</html>
